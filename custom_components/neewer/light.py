@@ -70,8 +70,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Neewer Light platform."""
+    _LOGGER.debug("[LIGHT SETUP] Setting up light platform for entry: %s", config_entry.entry_id)
     coordinator: NeewerDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-    async_add_entities([NeewerLightEntity(coordinator)])
+    _LOGGER.debug("[LIGHT SETUP] Retrieved coordinator: %s", coordinator)
+    
+    light_entity = NeewerLightEntity(coordinator)
+    _LOGGER.debug("[LIGHT SETUP] Created light entity with unique_id: %s", light_entity.unique_id)
+    
+    async_add_entities([light_entity])
+    _LOGGER.debug("[LIGHT SETUP] Light entity added successfully")
 
 
 class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEntity):
@@ -82,10 +89,15 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
 
     def __init__(self, coordinator: NeewerDataUpdateCoordinator) -> None:
         """Initialize the Neewer Light entity."""
+        _LOGGER.debug("[ENTITY INIT] Initializing light entity")
         super().__init__(coordinator)
         self._device: NeewerDevice = coordinator.device
         self._attr_unique_id = self._device.address
         self._attr_device_info = coordinator.device_info
+        _LOGGER.debug(
+            "[ENTITY INIT] Entity initialized - Address: %s, Capabilities: %s",
+            self._device.address, self._device.capabilities
+        )
 
         # Set supported color modes based on capabilities
         self._supported_color_modes: set[ColorMode] = {

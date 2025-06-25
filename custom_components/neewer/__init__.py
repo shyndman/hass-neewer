@@ -53,50 +53,74 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Neewer Light from a config entry."""
     # Get address from unique_id (preferred) or from config data (fallback)
     address = entry.unique_id or entry.data.get("address")
+    _LOGGER.debug(
+        "Config entry debug: unique_id=%s, data=%s, resolved_address=%s",
+        entry.unique_id, entry.data, address
+    )
     if not address:
-        _LOGGER.error("Config entry address is missing from both unique_id and data.")
+        _LOGGER.error(
+            "Config entry address is missing from both unique_id (%s) and data (%s).",
+            entry.unique_id, entry.data
+        )
         return False
 
     # Get the BLEDevice from the address
+    _LOGGER.debug("[SETUP] Looking for BLE device with address: %s", address)
     ble_device = bluetooth.async_ble_device_from_address(
         hass, address, connectable=True
     )
     if not ble_device:
         _LOGGER.warning(
-            "BLEDevice not found for address %s, retrying discovery", address
+            "[SETUP] BLEDevice not found for address %s, retrying discovery", address
         )
+        # Also try to find any device (connectable or not) for debugging
+        any_device = bluetooth.async_ble_device_from_address(hass, address, connectable=False)
+        if any_device:
+            _LOGGER.debug("[SETUP] Found non-connectable device: %s", any_device)
+        else:
+            _LOGGER.debug("[SETUP] No device found at all with address %s", address)
         # If device is not immediately available, try to discover it
         # This might happen if HA restarts and the device hasn't advertised yet
         bluetooth.async_rediscover_address(hass, address)
         return False  # Defer setup until device is discovered
+    
+    _LOGGER.debug(
+        "[SETUP] Found BLE device - Name: %s, Address: %s",
+        ble_device.name, ble_device.address
+    )
 
     # Initialize NeewerLightData (singleton)
     neewer_data = NeewerLightData(hass)
 
     # Get enhanced device info including MAC discovery
+    _LOGGER.debug("[SETUP] Starting enhanced device info discovery")
     device_info = await async_get_enhanced_device_info(
         hass, ble_device.name or "Unknown", ble_device.address
     )
+    _LOGGER.debug("[SETUP] Enhanced device info result: %s", device_info)
 
+    _LOGGER.debug("[SETUP] Looking up device capabilities")
     capabilities = await neewer_data.async_get_light_capabilities(
         ble_device.name or ble_device.address, ble_device.address
     )
+    _LOGGER.debug("[SETUP] Device capabilities result: %s", capabilities)
 
     if not capabilities:
-        _LOGGER.error("Could not determine capabilities for device %s", ble_device.name)
+        _LOGGER.error("[SETUP] FAILED - Could not determine capabilities for device %s", ble_device.name)
         return False
 
     # Add MAC discovery results to capabilities
-    capabilities.update(
-        {
-            "mac_address": device_info.get("mac_address"),
-            "mac_discovery_successful": device_info.get(
-                "mac_discovery_successful", False
-            ),
-            "mac_source": device_info.get("mac_source", "unknown"),
-        }
-    )
+    mac_data = {
+        "mac_address": device_info.get("mac_address"),
+        "mac_discovery_successful": device_info.get(
+            "mac_discovery_successful", False
+        ),
+        "mac_source": device_info.get("mac_source", "unknown"),
+    }
+    _LOGGER.debug("[SETUP] Adding MAC discovery data to capabilities: %s", mac_data)
+    capabilities.update(mac_data)
 
+    _LOGGER.debug("[SETUP] Creating coordinator")
     coordinator = NeewerDataUpdateCoordinator(
         hass,
         _LOGGER,
@@ -104,18 +128,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         address,
         capabilities,
     )
+    _LOGGER.debug("[SETUP] Coordinator created successfully")
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    _LOGGER.debug("[SETUP] Coordinator stored in hass.data")
 
     # Start the coordinator to connect and poll
+    _LOGGER.debug("[SETUP] Starting coordinator")
     entry.async_on_unload(coordinator.async_start())
+    _LOGGER.debug("[SETUP] Coordinator start scheduled")
 
+    _LOGGER.debug("[SETUP] Setting up platforms: %s", PLATFORMS)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _LOGGER.debug("[SETUP] Platforms setup completed")
 
     # Register services
+    _LOGGER.debug("[SETUP] Registering services")
     await _async_register_services(hass)
+    _LOGGER.debug("[SETUP] Services registered")
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    _LOGGER.debug("[SETUP] Update listener added")
 
+    _LOGGER.debug("[SETUP] Setup completed successfully for entry: %s", entry.entry_id)
     return True
 
 
