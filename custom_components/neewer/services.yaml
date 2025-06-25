@@ -1,0 +1,117 @@
+set_gm:
+  name: Set Green/Magenta Adjustment
+  description: Adjust the Green/Magenta balance for CCT color temperature mode
+  target:
+    entity:
+      domain: light
+      integration: neewer
+  fields:
+    gm:
+      name: Green/Magenta Adjustment
+      description: Green/Magenta adjustment value (-50 to +50, 0 = neutral)
+      required: true
+      selector:
+        number:
+          min: -50
+          max: 50
+          step: 1
+          mode: slider
+
+set_advanced_effect:
+  name: Set Advanced Effect with Parameters
+  description: Set an advanced scene effect with custom parameters (17-effect lights only)
+  target:
+    entity:
+      domain: light
+      integration: neewer
+  fields:
+    effect:
+      name: Effect Name
+      description: Name of the effect to activate
+      required: true
+      selector:
+        select:
+          options:
+            - "Lightning"
+            - "Paparazzi"
+            - "Defective Bulb"
+            - "Explosion"
+            - "Welding"
+            - "CCT Flash"
+            - "HUE Flash"
+            - "CCT Pulse"
+            - "HUE Pulse"
+            - "Cop Car"
+            - "Candlelight"
+            - "HUE Loop"
+            - "CCT Loop"
+            - "INT Loop"
+            - "TV Screen"
+            - "Firework"
+            - "Party"
+    brightness:
+      name: Brightness
+      description: Effect brightness (0-100)
+      required: false
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+    speed:
+      name: Speed
+      description: Effect speed (1-10)
+      required: false
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 10
+          step: 1
+    cct:
+      name: Color Temperature
+      description: Color temperature value (device units, 27-65)
+      required: false
+      selector:
+        number:
+          min: 27
+          max: 65
+          step: 1
+    gm:
+      name: Green/Magenta
+      description: Green/Magenta adjustment (0-100, 50 = neutral)
+      required: false
+      default: 50
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+    hue:
+      name: Hue
+      description: Color hue (0-360 degrees)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 360
+          step: 1
+    saturation:
+      name: Saturation
+      description: Color saturation (0-100)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+    sparks:
+      name: Sparks Intensity
+      description: Spark effect intensity (1-10, for compatible effects)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10
+          step: 1
