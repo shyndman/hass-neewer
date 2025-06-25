@@ -169,6 +169,12 @@ class NeewerDevice:
                     NOTIFY_CHARACTERISTIC_UUID, self._notification_handler
                 )
                 _LOGGER.debug("Notifications enabled successfully")
+
+                # Critical: Send read request only AFTER notifications are enabled
+                # This matches the Swift implementation's didUpdateNotificationStateFor callback
+                _LOGGER.debug("Sending initial status query after notification setup")
+                await self._send_command([0x84, 0x00])
+
             except Exception as e:
                 _LOGGER.error("Failed to enable notifications: %s", e)
                 # List available characteristics for debugging
@@ -181,13 +187,7 @@ class NeewerDevice:
                             char.uuid,
                             char.properties,
                         )
-
-            # Wait a bit for the device to be ready
-            await asyncio.sleep(0.1)
-
-            # Send initial read request
-            _LOGGER.debug("Sending initial status query")
-            await self._send_command([0x84, 0x00])
+                raise
 
             # Wait for response
             await asyncio.sleep(0.5)
@@ -224,8 +224,8 @@ class NeewerDevice:
         self, _characteristic: BleakGATTCharacteristic, data: bytearray
     ) -> None:
         """Handle incoming notifications."""
-        _LOGGER.debug(
-            "Notification from %s: %s (len=%d)", self.name, data.hex(), len(data)
+        _LOGGER.info(
+            "🔔 NOTIFICATION from %s: %s (len=%d)", self.name, data.hex(), len(data)
         )
 
         # Validate checksum
@@ -287,13 +287,13 @@ class NeewerDevice:
         checksum = self._calculate_checksum(full_command)
         full_command.append(checksum)
 
-        _LOGGER.debug("Sending command to %s: %s", self.name, bytes(full_command).hex())
+        _LOGGER.info("📤 SENDING to %s: %s", self.name, bytes(full_command).hex())
 
         try:
             assert self._client is not None, "Client is not initialized"
             _LOGGER.debug("Writing to characteristic %s", CONTROL_CHARACTERISTIC_UUID)
             await self._client.write_gatt_char(
-                CONTROL_CHARACTERISTIC_UUID, bytes(full_command), response=True
+                CONTROL_CHARACTERISTIC_UUID, bytes(full_command), response=False
             )
             _LOGGER.debug("Command written successfully")
             self._last_command_time = asyncio.get_event_loop().time()
