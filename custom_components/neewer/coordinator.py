@@ -40,6 +40,9 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
             ble_device, capabilities, disconnect_callback=self._on_device_disconnect
         )
 
+        # Register for device notifications to update coordinator state
+        self.device.add_notification_callback(self._on_notification)
+
         super().__init__(
             hass=hass,
             logger=logger,
@@ -137,7 +140,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
     def _on_notification(self, data: bytes) -> None:
         """Handle device notification."""
         _LOGGER.debug("Device notification received: %s", data.hex())
-        # Trigger coordinator update when we receive notifications
+        # Update listeners when we receive notifications (state changes)
         self.async_update_listeners()
 
     @callback

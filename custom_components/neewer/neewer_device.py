@@ -191,7 +191,11 @@ class NeewerDevice:
 
             # Wait for response
             await asyncio.sleep(0.5)
-            _LOGGER.debug("Initial connection sequence completed")
+            _LOGGER.debug(
+                "Initial connection sequence completed - is_on=%s, brightness=%s",
+                self._is_on,
+                self._brightness,
+            )
 
         except BleakError as err:
             msg = f"Failed to connect to {self.name}: {err}"
@@ -247,15 +251,13 @@ class NeewerDevice:
             notification_type = data[1] if len(data) > 1 else 0
             _LOGGER.debug("Processing notification type: 0x%02x", notification_type)
 
-            if data[1] == NOTIFICATION_CHANNEL_TAG:
+            if data[1] == NOTIFICATION_CHANNEL_TAG and len(data) == 5:
                 # Channel update notification: [0x78, 0x01, 0x01, CHANNEL, CHECKSUM]
-                if len(data) >= 5:
-                    self._effect = data[3]
-                    _LOGGER.debug("Effect updated to: %s", self._effect)
-            elif data[1] == 0x84:
-                # Status response notification - parse device state
-                _LOGGER.debug("Received status response, parsing device state")
-                self._parse_status_response(data)
+                channel = data[3] + 1  # Convert 0-based to 1-based
+                # Clamp channel to valid range (1 to 17 for effects)
+                channel = max(1, min(17, channel))
+                self._effect = channel
+                _LOGGER.debug("Channel/Effect updated to: %s", self._effect)
             else:
                 _LOGGER.debug(
                     "Unknown notification type: 0x%02x, data: %s", data[1], data.hex()
@@ -267,16 +269,6 @@ class NeewerDevice:
                 callback(bytes(data))
             except Exception:
                 _LOGGER.exception("Error in notification callback")
-
-    def _parse_status_response(self, data: bytearray) -> None:
-        """Parse status response from device."""
-        _LOGGER.debug("Parsing status response: %s", data.hex())
-        # TODO: Implement proper status parsing based on Neewer protocol
-        # For now, just log the raw data to understand the format
-        if len(data) >= 8:
-            _LOGGER.debug(
-                "Status data - bytes 2-7: %s", " ".join(f"0x{b:02x}" for b in data[2:8])
-            )
 
     async def _send_command(self, data: list[int]) -> None:
         """Send a command to the device."""
@@ -360,6 +352,11 @@ class NeewerDevice:
         if not self._capabilities.get("supportRGB"):
             command = [0x82, 0x01, brightness]
             await self._send_command(command)
+        else:
+            # For RGB lights, brightness must be sent with color data
+            # Use current hue and saturation values
+            await self.set_hsi(self._hue, self._saturation, brightness)
+            return  # set_hsi will update _brightness
 
         self._brightness = brightness
 
