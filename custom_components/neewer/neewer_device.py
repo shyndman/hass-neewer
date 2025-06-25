@@ -68,6 +68,12 @@ class NeewerDevice:
         self._effect: int = 0
         self._gm: int = 0  # Green/Magenta adjustment
 
+        # Device mode tracking (like Swift implementation)
+        self._current_mode: str = "CCT"  # "CCT", "RGB", "SCENE"
+
+        # Notification polling pattern (like Python implementation)
+        self._received_data: bytes | None = None
+
         # MAC address for advanced commands
         self._mac_address = capabilities.get("mac_address")
 
@@ -170,10 +176,14 @@ class NeewerDevice:
                 )
                 _LOGGER.debug("Notifications enabled successfully")
 
-                # Critical: Send read request only AFTER notifications are enabled
-                # This matches the Swift implementation's didUpdateNotificationStateFor callback
-                _LOGGER.debug("Sending initial status query after notification setup")
-                await self._send_command([0x84, 0x00])
+                # Query device status using polling pattern (like Python implementation)
+                _LOGGER.debug("Querying initial device status")
+                if await self._query_device_status():
+                    _LOGGER.debug("Successfully read initial device status")
+                else:
+                    _LOGGER.warning(
+                        "Failed to read initial device status - device may not respond"
+                    )
 
             except Exception as e:
                 _LOGGER.error("Failed to enable notifications: %s", e)
@@ -188,14 +198,6 @@ class NeewerDevice:
                             char.properties,
                         )
                 raise
-
-            # Wait for response
-            await asyncio.sleep(0.5)
-            _LOGGER.debug(
-                "Initial connection sequence completed - is_on=%s, brightness=%s",
-                self._is_on,
-                self._brightness,
-            )
 
         except BleakError as err:
             msg = f"Failed to connect to {self.name}: {err}"
@@ -227,6 +229,9 @@ class NeewerDevice:
         _LOGGER.info(
             "🔔 NOTIFICATION from %s: %s (len=%d)", self.name, data.hex(), len(data)
         )
+
+        # Store raw response for polling pattern (like Python implementation)
+        self._received_data = bytes(data)
 
         # Validate checksum
         if len(data) >= MIN_NOTIFICATION_LENGTH and data[0] == PREFIX:
@@ -269,6 +274,54 @@ class NeewerDevice:
                 callback(bytes(data))
             except Exception:
                 _LOGGER.exception("Error in notification callback")
+
+    async def _query_device_status(self) -> bool:
+        """Query device status and wait for response using polling pattern (like Python implementation)."""
+        if not self.is_connected:
+            return False
+
+        # Clear previous response
+        self._received_data = None
+
+        # Send power status query (like Python implementation)
+        _LOGGER.debug("Querying device power status")
+        await self._send_command([0x85, 0x00])  # Power status query
+
+        # Poll for response with timeout (like Python implementation)
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            if self._received_data is not None:
+                _LOGGER.debug("Received status response after %d attempts", attempt + 1)
+                self._parse_status_response(self._received_data)
+                return True
+            await asyncio.sleep(0.25)  # 250ms delay like Python version
+
+        _LOGGER.warning("Device status query timed out after %d attempts", max_attempts)
+        return False
+
+    def _parse_status_response(self, data: bytes) -> None:
+        """Parse status response from device (based on Python implementation)."""
+        _LOGGER.debug("Parsing status response: %s", data.hex())
+
+        if len(data) >= 4:
+            # Power status response format: [0x78, 0x85, ?, POWER, checksum]
+            # POWER: 1 = ON, 2 = STANDBY/OFF (from Python implementation)
+            if len(data) >= 5 and data[0] == PREFIX and data[1] == 0x85:
+                power_state = data[3]
+                if power_state == 1:
+                    self._is_on = True
+                    _LOGGER.debug("Device power state: ON")
+                elif power_state == 2:
+                    self._is_on = False
+                    _LOGGER.debug("Device power state: STANDBY/OFF")
+                else:
+                    _LOGGER.warning("Unknown power state: %d", power_state)
+            else:
+                _LOGGER.debug(
+                    "Response format: prefix=0x%02x, type=0x%02x",
+                    data[0] if data else 0,
+                    data[1] if len(data) > 1 else 0,
+                )
 
     async def _send_command(self, data: list[int]) -> None:
         """Send a command to the device."""
@@ -345,20 +398,31 @@ class NeewerDevice:
             raise
 
     async def set_brightness(self, brightness: int) -> None:
-        """Set brightness (0-100)."""
+        """Set brightness (0-100) using mode-aware commands (like Swift implementation)."""
         brightness = max(0, min(100, brightness))
 
         # For CCT-only lights, use dedicated brightness command
         if not self._capabilities.get("supportRGB"):
             command = [0x82, 0x01, brightness]
             await self._send_command(command)
-        else:
-            # For RGB lights, brightness must be sent with color data
-            # Use current hue and saturation values
-            await self.set_hsi(self._hue, self._saturation, brightness)
-            return  # set_hsi will update _brightness
+            self._brightness = brightness
+            return
 
-        self._brightness = brightness
+        # For RGB-capable lights, brightness command depends on current mode (like Swift)
+        if self._current_mode == "CCT":
+            # Use current CCT values with new brightness
+            cct_kelvin = 2700 + (self._cct - 32) * (6500 - 2700) / (56 - 32)
+            await self.set_cct(int(cct_kelvin), brightness, self._gm - 50)
+        elif self._current_mode == "RGB":
+            # Use current RGB values with new brightness
+            await self.set_hsi(self._hue, self._saturation, brightness)
+        elif self._current_mode == "SCENE":
+            # Use current scene with new brightness
+            await self.set_effect(self._effect, brightness)
+        else:
+            # Default to CCT mode if mode is unknown
+            _LOGGER.warning("Unknown mode %s, defaulting to CCT", self._current_mode)
+            await self.set_cct(5600, brightness)  # Default 5600K
 
     async def set_cct(
         self, cct_kelvin: int, brightness: int | None = None, gm: int = 0
@@ -398,6 +462,7 @@ class NeewerDevice:
                 self._brightness = brightness
                 self._cct = device_cct
                 self._gm = gm_value
+                self._current_mode = "CCT"  # Update mode after successful CCT command
             except NeewerCommandError as err:
                 _LOGGER.warning(
                     "CCT+GM command failed, falling back to basic CCT: %s", err
@@ -411,6 +476,7 @@ class NeewerDevice:
             await self._send_command(command)
             self._brightness = brightness
             self._cct = device_cct
+            self._current_mode = "CCT"  # Update mode after successful CCT command
             # Don't update GM value when using basic command
         except NeewerCommandError:
             _LOGGER.exception("CCT command failed")
@@ -450,6 +516,7 @@ class NeewerDevice:
                 self._hue = hue
                 self._saturation = saturation
                 self._brightness = brightness
+                self._current_mode = "RGB"  # Update mode after successful RGB command
             except NeewerCommandError as err:
                 _LOGGER.warning(
                     "New RGB command failed, falling back to old format: %s", err
@@ -464,6 +531,7 @@ class NeewerDevice:
             self._hue = hue
             self._saturation = saturation
             self._brightness = brightness
+            self._current_mode = "RGB"  # Update mode after successful RGB command
         except NeewerCommandError:
             _LOGGER.exception("RGB command failed")
             raise
@@ -490,6 +558,9 @@ class NeewerDevice:
                     await self._send_command(command)
                     self._effect = effect_id
                     self._brightness = brightness
+                    self._current_mode = (
+                        "SCENE"  # Update mode after successful scene command
+                    )
                 except (ValueError, KeyError) as err:
                     _LOGGER.warning("Failed to build advanced scene command: %s", err)
                     # Fall through to basic command
@@ -505,3 +576,4 @@ class NeewerDevice:
         await self._send_command(command)
         self._effect = effect_id
         self._brightness = brightness
+        self._current_mode = "SCENE"  # Update mode after successful scene command
