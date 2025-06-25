@@ -17,7 +17,7 @@ from .mac_discovery import async_get_enhanced_device_info
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import HomeAssistant, ServiceCall
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,22 +27,26 @@ PLATFORMS: list[Platform] = [Platform.LIGHT]
 SERVICE_SET_GM = "set_gm"
 SERVICE_SET_ADVANCED_EFFECT = "set_advanced_effect"
 
-SET_GM_SCHEMA = vol.Schema({
-    vol.Required("entity_id"): cv.entity_ids,
-    vol.Required("gm"): vol.Coerce(int),
-})
+SET_GM_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+        vol.Required("gm"): vol.Coerce(int),
+    }
+)
 
-SET_ADVANCED_EFFECT_SCHEMA = vol.Schema({
-    vol.Required("entity_id"): cv.entity_ids,
-    vol.Required("effect"): cv.string,
-    vol.Optional("brightness", default=100): vol.Coerce(int),
-    vol.Optional("speed", default=5): vol.Coerce(int),
-    vol.Optional("cct"): vol.Coerce(int),
-    vol.Optional("gm", default=50): vol.Coerce(int),
-    vol.Optional("hue"): vol.Coerce(int),
-    vol.Optional("saturation"): vol.Coerce(int),
-    vol.Optional("sparks"): vol.Coerce(int),
-})
+SET_ADVANCED_EFFECT_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_ids,
+        vol.Required("effect"): cv.string,
+        vol.Optional("brightness", default=100): vol.Coerce(int),
+        vol.Optional("speed", default=5): vol.Coerce(int),
+        vol.Optional("cct"): vol.Coerce(int),
+        vol.Optional("gm", default=50): vol.Coerce(int),
+        vol.Optional("hue"): vol.Coerce(int),
+        vol.Optional("saturation"): vol.Coerce(int),
+        vol.Optional("sparks"): vol.Coerce(int),
+    }
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -82,11 +86,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
 
     # Add MAC discovery results to capabilities
-    capabilities.update({
-        "mac_address": device_info.get("mac_address"),
-        "mac_discovery_successful": device_info.get("mac_discovery_successful", False),
-        "mac_source": device_info.get("mac_source", "unknown"),
-    })
+    capabilities.update(
+        {
+            "mac_address": device_info.get("mac_address"),
+            "mac_discovery_successful": device_info.get(
+                "mac_discovery_successful", False
+            ),
+            "mac_source": device_info.get("mac_source", "unknown"),
+        }
+    )
 
     coordinator = NeewerDataUpdateCoordinator(
         hass,
@@ -128,7 +136,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
     if hass.services.has_service(DOMAIN, SERVICE_SET_GM):
         return  # Services already registered
 
-    async def async_set_gm(call) -> None:
+    async def async_set_gm(call: ServiceCall) -> None:
         """Handle set GM service call."""
         entity_ids = call.data["entity_id"]
         gm_value = call.data["gm"]
@@ -141,10 +149,9 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             if entity and entity.domain == "light":
                 # Get the coordinator for this entity
                 for coordinator in hass.data.get(DOMAIN, {}).values():
-                    if (
-                        hasattr(coordinator, "device")
-                        and coordinator.device.capabilities.get("supportCCTGM")
-                    ):
+                    if hasattr(
+                        coordinator, "device"
+                    ) and coordinator.device.capabilities.get("supportCCTGM"):
                         # Set GM using current CCT values
                         current_cct = coordinator.device.cct or 50
                         current_brightness = coordinator.device.brightness or 100
@@ -152,11 +159,11 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                             # Convert device CCT back to Kelvin for the method
                             2700 + (current_cct - 27) * (6500 - 2700) / (65 - 27),
                             current_brightness,
-                            gm_value
+                            gm_value,
                         )
                         await coordinator.async_refresh()
 
-    async def async_set_advanced_effect(call) -> None:
+    async def async_set_advanced_effect(call: ServiceCall) -> None:
         """Handle set advanced effect service call."""
         entity_ids = call.data["entity_id"]
         effect_name = call.data["effect"]
@@ -166,6 +173,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         # Convert effect name to ID
         from .light import NEEWER_ADVANCED_EFFECTS
+
         effect_id = next(
             (k for k, v in NEEWER_ADVANCED_EFFECTS.items() if v == effect_name),
             None,
@@ -180,10 +188,9 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             if entity and entity.domain == "light":
                 # Get the coordinator for this entity
                 for coordinator in hass.data.get(DOMAIN, {}).values():
-                    if (
-                        hasattr(coordinator, "device")
-                        and coordinator.device.capabilities.get("support17FX")
-                    ):
+                    if hasattr(
+                        coordinator, "device"
+                    ) and coordinator.device.capabilities.get("support17FX"):
                         await coordinator.device.set_effect(effect_id, **params)
                         await coordinator.async_refresh()
 

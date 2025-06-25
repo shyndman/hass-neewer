@@ -4,12 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from bleak import BleakClient
-from bleak.backends.characteristic import BleakGATTCharacteristic
-from bleak.backends.device import BLEDevice
 from bleak.exc import BleakError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 
@@ -23,6 +19,13 @@ from .const import (
     SERVICE_UUID,
 )
 from .scene_effects import build_advanced_scene_command, validate_scene_parameters
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from bleak import BleakClient
+    from bleak.backends.characteristic import BleakGATTCharacteristic
+    from bleak.backends.device import BLEDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -206,7 +209,11 @@ class NeewerDevice:
                 return
 
         # Parse notifications
-        if len(data) >= MIN_NOTIFICATION_LENGTH and data[0] == PREFIX and data[1] == NOTIFICATION_CHANNEL_TAG:
+        if (
+            len(data) >= MIN_NOTIFICATION_LENGTH
+            and data[0] == PREFIX
+            and data[1] == NOTIFICATION_CHANNEL_TAG
+        ):
             # Channel update notification: [0x78, 0x01, 0x01, CHANNEL, CHECKSUM]
             self._effect = data[3]
             _LOGGER.debug("Effect updated to: %s", self._effect)
@@ -238,6 +245,7 @@ class NeewerDevice:
         _LOGGER.debug("Sending command to %s: %s", self.name, bytes(full_command).hex())
 
         try:
+            assert self._client is not None, "Client is not initialized"
             await self._client.write_gatt_char(
                 CONTROL_CHARACTERISTIC_UUID, bytes(full_command), response=True
             )
@@ -263,7 +271,7 @@ class NeewerDevice:
             pass
         return None
 
-    async def set_power(self, on: bool) -> None:
+    async def set_power(self, *, on: bool) -> None:
         """Turn the light on or off."""
         mac_bytes = self._get_mac_bytes()
 
@@ -273,17 +281,20 @@ class NeewerDevice:
                 command = [0x8D, 0x08, *mac_bytes, 0x81, 0x01 if on else 0x02]
                 await self._send_command(command)
                 self._is_on = on
-                return
             except NeewerCommandError as err:
-                _LOGGER.warning("New power command failed, falling back to old format: %s", err)
+                _LOGGER.warning(
+                    "New power command failed, falling back to old format: %s", err
+                )
+            else:
+                return
 
         # Fallback to old format
         try:
             command = [0x81, 0x01, 0x01 if on else 0x02]
             await self._send_command(command)
             self._is_on = on
-        except NeewerCommandError as err:
-            _LOGGER.error("Power command failed: %s", err)
+        except NeewerCommandError:
+            _LOGGER.exception("Power command failed")
             raise
 
     async def set_brightness(self, brightness: int) -> None:
@@ -335,9 +346,12 @@ class NeewerDevice:
                 self._brightness = brightness
                 self._cct = device_cct
                 self._gm = gm_value
-                return
             except NeewerCommandError as err:
-                _LOGGER.warning("CCT+GM command failed, falling back to basic CCT: %s", err)
+                _LOGGER.warning(
+                    "CCT+GM command failed, falling back to basic CCT: %s", err
+                )
+            else:
+                return
 
         # Fallback to basic CCT
         try:
@@ -346,8 +360,8 @@ class NeewerDevice:
             self._brightness = brightness
             self._cct = device_cct
             # Don't update GM value when using basic command
-        except NeewerCommandError as err:
-            _LOGGER.error("CCT command failed: %s", err)
+        except NeewerCommandError:
+            _LOGGER.exception("CCT command failed")
             raise
 
     async def set_hsi(
@@ -384,9 +398,12 @@ class NeewerDevice:
                 self._hue = hue
                 self._saturation = saturation
                 self._brightness = brightness
-                return
             except NeewerCommandError as err:
-                _LOGGER.warning("New RGB command failed, falling back to old format: %s", err)
+                _LOGGER.warning(
+                    "New RGB command failed, falling back to old format: %s", err
+                )
+            else:
+                return
 
         # Fallback to old RGB command format
         try:
@@ -395,8 +412,8 @@ class NeewerDevice:
             self._hue = hue
             self._saturation = saturation
             self._brightness = brightness
-        except NeewerCommandError as err:
-            _LOGGER.error("RGB command failed: %s", err)
+        except NeewerCommandError:
+            _LOGGER.exception("RGB command failed")
             raise
 
     async def set_effect(
@@ -421,16 +438,18 @@ class NeewerDevice:
                     await self._send_command(command)
                     self._effect = effect_id
                     self._brightness = brightness
-                    return
                 except (ValueError, KeyError) as err:
                     _LOGGER.warning("Failed to build advanced scene command: %s", err)
                     # Fall through to basic command
+                else:
+                    return
             else:
-                _LOGGER.debug("Advanced effects require MAC address, falling back to basic")
+                _LOGGER.debug(
+                    "Advanced effects require MAC address, falling back to basic"
+                )
 
         # Basic scene command (9-effect lights or fallback)
         command = [0x88, 0x02, brightness, effect_id]
         await self._send_command(command)
         self._effect = effect_id
         self._brightness = brightness
-

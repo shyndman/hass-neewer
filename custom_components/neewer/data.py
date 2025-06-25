@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Self
 
 import aiohttp
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -24,7 +24,7 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-LIGHTS_DB_FILE = os.path.join(os.path.dirname(__file__), "lights.db.json")
+LIGHTS_DB_FILE = Path(__file__).parent / "lights.db.json"
 
 
 class NeewerLightData:
@@ -37,13 +37,14 @@ class NeewerLightData:
     _last_refresh: float = 0
     _date_code_map: dict[str, str] | None = None
 
-    def __new__(cls, hass: HomeAssistant) -> NeewerLightData:
+    def __new__(cls, hass: HomeAssistant) -> Self:
         """Singleton pattern for NeewerLightData."""
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._hass = hass
-            cls._instance._store = Store(hass, STORAGE_VERSION, f"{DOMAIN}_database")
-            cls._instance._init_date_code_map()
+            instance = super().__new__(cls)
+            instance._hass = hass
+            instance._store = Store(hass, STORAGE_VERSION, f"{DOMAIN}_database")
+            instance._init_date_code_map()
+            cls._instance = instance
             # Don't load synchronously in __new__, will be loaded async
         return cls._instance
 
@@ -109,7 +110,7 @@ class NeewerLightData:
         try:
             timeout = aiohttp.ClientTimeout(total=30)
             async with session.get(REMOTE_DB_URL, timeout=timeout) as response:
-                if response.status == 200:
+                if response.status == 200:  # noqa: PLR2004
                     data = await response.json()
                     if self._validate_database(data):
                         return data
@@ -125,7 +126,7 @@ class NeewerLightData:
     async def _async_load_local_database(self) -> None:
         """Load the lights database from the local file as final fallback."""
         try:
-            with open(LIGHTS_DB_FILE, encoding="utf-8") as f:
+            with LIGHTS_DB_FILE.open(encoding="utf-8") as f:
                 data = json.load(f)
                 if self._validate_database(data):
                     self._lights_db = data
@@ -134,10 +135,10 @@ class NeewerLightData:
                     _LOGGER.error("Local database validation failed")
                     self._lights_db = {"version": 2, "lights": []}
         except FileNotFoundError:
-            _LOGGER.error("Lights database file not found: %s", LIGHTS_DB_FILE)
+            _LOGGER.exception("Lights database file not found: %s", LIGHTS_DB_FILE)
             self._lights_db = {"version": 2, "lights": []}
-        except json.JSONDecodeError as e:
-            _LOGGER.error("Error decoding lights database JSON: %s", e)
+        except json.JSONDecodeError:
+            _LOGGER.exception("Error decoding lights database JSON")
             self._lights_db = {"version": 2, "lights": []}
 
     def _validate_database(self, data: dict[str, Any]) -> bool:
@@ -156,11 +157,9 @@ class NeewerLightData:
     def is_neewer_light(device_name: str) -> bool:
         """Check if a device name indicates a Neewer light."""
         name_lower = device_name.lower()
-        return (
-            any(keyword in name_lower for keyword in ["nwr", "neewer", "sl", "nee"])
-            or name_lower.startswith("nw-")
-            or name_lower.startswith("neewer-")
-        )
+        return any(
+            keyword in name_lower for keyword in ["nwr", "neewer", "sl", "nee"]
+        ) or name_lower.startswith(("nw-", "neewer-"))
 
     async def async_get_light_capabilities(
         self, device_name: str, device_identifier: str = ""
@@ -198,9 +197,11 @@ class NeewerLightData:
         return None
 
     def get_light_capabilities(
-        self, device_name: str, device_identifier: str = ""
+        self,
+        device_name: str,
+        device_identifier: str = "",  # noqa: ARG002
     ) -> dict[str, Any] | None:
-        """Synchronous wrapper for backward compatibility."""
+        """Get light capabilities for backward compatibility."""
         # This is a temporary wrapper - all callers should migrate to async version
         _LOGGER.warning(
             "Using deprecated synchronous get_light_capabilities for %s", device_name
@@ -209,7 +210,8 @@ class NeewerLightData:
 
     def _construct_nick_name(self, project_name: str, device_identifier: str) -> str:
         """Construct nick name as project_name + last 6 chars of identifier."""
-        if len(device_identifier) >= 6:
+        min_identifier_len = 6
+        if len(device_identifier) >= min_identifier_len:
             last_6_chars = device_identifier[-6:].replace(":", "").upper()
             return f"{project_name}-{last_6_chars}"
         return project_name
@@ -227,9 +229,10 @@ class NeewerLightData:
             return device_name[7:]
 
         # "NW-YYYYMMDD&XXXXXXXX" format: Extract date code, lookup in mapping table
+        min_device_name_len = 20
         if (
             name_lower.startswith("nw-")
-            and len(device_name) >= 20
+            and len(device_name) >= min_device_name_len
             and "&" in device_name
             and self._date_code_map
         ):
@@ -244,7 +247,7 @@ class NeewerLightData:
         # Fallback for other formats, use full name
         return device_name
 
-    def _map_project_name_to_light_type(self, project_name: str) -> int | None:
+    def _map_project_name_to_light_type(self, project_name: str) -> int | None:  # noqa: C901, PLR0911, PLR0912
         """Map project name to a numeric Light Type ID."""
         project_name_lower = project_name.lower()
 

@@ -17,6 +17,8 @@ MIN_NOTIFICATION_LENGTH = 4
 NOTIFICATION_CHANNEL_TAG = 0x01
 
 # Database Constants
-REMOTE_DB_URL = "https://raw.githubusercontent.com/keefo/NeewerLite/main/Database/lights.json"
+REMOTE_DB_URL = (
+    "https://raw.githubusercontent.com/keefo/NeewerLite/main/Database/lights.json"
+)
 CACHE_REFRESH_INTERVAL = 28800  # 8 hours in seconds
 STORAGE_VERSION = 1

@@ -12,10 +12,6 @@ from homeassistant.components.light import (
     ATTR_HS_COLOR,
     LightEntity,
 )
-
-# Custom attributes for GM (Green/Magenta) adjustment
-ATTR_GM = "gm"  # Green/Magenta adjustment (-50 to +50)
-
 from homeassistant.components.light.const import ColorMode, LightEntityFeature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -27,6 +23,10 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .neewer_device import NeewerDevice
+
+# Custom attributes for GM (Green/Magenta) adjustment
+ATTR_GM = "gm"  # Green/Magenta adjustment (-50 to +50)
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -136,8 +136,9 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         """Return the color mode of the light."""
         # Determine the current color mode based on the light's state
         if self._device.effect != 0:
-            # When an effect is active, the color mode should reflect what can be adjusted
-            # If brightness can be adjusted during effect, return BRIGHTNESS, else ONOFF
+            # When an effect is active, the color mode should reflect what can be
+            # adjusted. If brightness can be adjusted during effect, return BRIGHTNESS,
+            # else ONOFF
             if self._device.brightness != 0:
                 return ColorMode.BRIGHTNESS
             return ColorMode.ONOFF
@@ -195,7 +196,9 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
 
         # Add MAC discovery info for diagnostic purposes
         attrs["mac_address"] = self._device.capabilities.get("mac_address")
-        attrs["mac_discovery_successful"] = self._device.capabilities.get("mac_discovery_successful", False)
+        attrs["mac_discovery_successful"] = self._device.capabilities.get(
+            "mac_discovery_successful", False
+        )
         attrs["mac_source"] = self._device.capabilities.get("mac_source", "unknown")
 
         return attrs if attrs else None
@@ -241,7 +244,7 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         # Request an update to reflect the new state
         await self.coordinator.async_refresh()
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **_kwargs: Any) -> None:
         """Turn the light off."""
         _LOGGER.debug("Turning off light %s", self.entity_id)
         await self._device.set_power(False)

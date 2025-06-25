@@ -68,7 +68,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
         _seconds_since_last_poll: float | None,
     ) -> bool:
         """Determine if a poll is needed."""
-        # Only poll if HA is running, device is not connected, and we have a connectable device
+        # Only poll if HA is running, device not connected, and connectable
         return (
             self.hass.state == CoreState.running
             and not self.device.is_connected

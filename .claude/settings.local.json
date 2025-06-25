@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ruff check:*)",
+      "Bash(grep:*)",
+      "Bash(uv run tool pyright:*)",
+      "Bash(uv tool run:*)"
+    ],
+    "deny": []
+  }
+}
