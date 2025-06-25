@@ -51,9 +51,10 @@ SET_ADVANCED_EFFECT_SCHEMA = vol.Schema(
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Neewer Light from a config entry."""
-    address = entry.unique_id
+    # Get address from unique_id (preferred) or from config data (fallback)
+    address = entry.unique_id or entry.data.get("address")
     if not address:
-        _LOGGER.error("Config entry unique ID (address) is missing.")
+        _LOGGER.error("Config entry address is missing from both unique_id and data.")
         return False
 
     # Get the BLEDevice from the address

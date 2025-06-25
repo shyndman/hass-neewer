@@ -50,7 +50,7 @@ class NeewerLightConfigFlow(ConfigFlow, domain=DOMAIN):
             assert self._discovered_device is not None
             return self.async_create_entry(
                 title=self._discovered_device.name,
-                data={},
+                data={"address": self._discovered_device.address},
             )
 
         assert self._discovered_device is not None
