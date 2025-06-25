@@ -126,14 +126,18 @@ class NeewerLightData:
     async def _async_load_local_database(self) -> None:
         """Load the lights database from the local file as final fallback."""
         try:
-            with LIGHTS_DB_FILE.open(encoding="utf-8") as f:
-                data = json.load(f)
-                if self._validate_database(data):
-                    self._lights_db = data
-                    _LOGGER.info("Loaded lights database from local file")
-                else:
-                    _LOGGER.error("Local database validation failed")
-                    self._lights_db = {"version": 2, "lights": []}
+
+            def _load_file() -> dict[str, Any]:
+                with LIGHTS_DB_FILE.open(encoding="utf-8") as f:
+                    return json.load(f)
+
+            data = await self._hass.async_add_executor_job(_load_file)
+            if self._validate_database(data):
+                self._lights_db = data
+                _LOGGER.info("Loaded lights database from local file")
+            else:
+                _LOGGER.error("Local database validation failed")
+                self._lights_db = {"version": 2, "lights": []}
         except FileNotFoundError:
             _LOGGER.exception("Lights database file not found: %s", LIGHTS_DB_FILE)
             self._lights_db = {"version": 2, "lights": []}

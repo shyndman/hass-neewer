@@ -55,12 +55,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     address = entry.unique_id or entry.data.get("address")
     _LOGGER.debug(
         "Config entry debug: unique_id=%s, data=%s, resolved_address=%s",
-        entry.unique_id, entry.data, address
+        entry.unique_id,
+        entry.data,
+        address,
     )
     if not address:
         _LOGGER.error(
             "Config entry address is missing from both unique_id (%s) and data (%s).",
-            entry.unique_id, entry.data
+            entry.unique_id,
+            entry.data,
         )
         return False
 
@@ -74,7 +77,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "[SETUP] BLEDevice not found for address %s, retrying discovery", address
         )
         # Also try to find any device (connectable or not) for debugging
-        any_device = bluetooth.async_ble_device_from_address(hass, address, connectable=False)
+        any_device = bluetooth.async_ble_device_from_address(
+            hass, address, connectable=False
+        )
         if any_device:
             _LOGGER.debug("[SETUP] Found non-connectable device: %s", any_device)
         else:
@@ -83,10 +88,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # This might happen if HA restarts and the device hasn't advertised yet
         bluetooth.async_rediscover_address(hass, address)
         return False  # Defer setup until device is discovered
-    
+
     _LOGGER.debug(
         "[SETUP] Found BLE device - Name: %s, Address: %s",
-        ble_device.name, ble_device.address
+        ble_device.name,
+        ble_device.address,
     )
 
     # Initialize NeewerLightData (singleton)
@@ -106,15 +112,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("[SETUP] Device capabilities result: %s", capabilities)
 
     if not capabilities:
-        _LOGGER.error("[SETUP] FAILED - Could not determine capabilities for device %s", ble_device.name)
+        _LOGGER.error(
+            "[SETUP] FAILED - Could not determine capabilities for device %s",
+            ble_device.name,
+        )
         return False
 
     # Add MAC discovery results to capabilities
     mac_data = {
         "mac_address": device_info.get("mac_address"),
-        "mac_discovery_successful": device_info.get(
-            "mac_discovery_successful", False
-        ),
+        "mac_discovery_successful": device_info.get("mac_discovery_successful", False),
         "mac_source": device_info.get("mac_source", "unknown"),
     }
     _LOGGER.debug("[SETUP] Adding MAC discovery data to capabilities: %s", mac_data)

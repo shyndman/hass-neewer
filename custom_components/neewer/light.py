@@ -70,13 +70,17 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Neewer Light platform."""
-    _LOGGER.debug("[LIGHT SETUP] Setting up light platform for entry: %s", config_entry.entry_id)
+    _LOGGER.debug(
+        "[LIGHT SETUP] Setting up light platform for entry: %s", config_entry.entry_id
+    )
     coordinator: NeewerDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     _LOGGER.debug("[LIGHT SETUP] Retrieved coordinator: %s", coordinator)
-    
+
     light_entity = NeewerLightEntity(coordinator)
-    _LOGGER.debug("[LIGHT SETUP] Created light entity with unique_id: %s", light_entity.unique_id)
-    
+    _LOGGER.debug(
+        "[LIGHT SETUP] Created light entity with unique_id: %s", light_entity.unique_id
+    )
+
     async_add_entities([light_entity])
     _LOGGER.debug("[LIGHT SETUP] Light entity added successfully")
 
@@ -96,14 +100,12 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         self._attr_device_info = coordinator.device_info
         _LOGGER.debug(
             "[ENTITY INIT] Entity initialized - Address: %s, Capabilities: %s",
-            self._device.address, self._device.capabilities
+            self._device.address,
+            self._device.capabilities,
         )
 
         # Set supported color modes based on capabilities
-        self._supported_color_modes: set[ColorMode] = {
-            ColorMode.ONOFF,
-            ColorMode.BRIGHTNESS,
-        }
+        self._supported_color_modes: set[ColorMode] = {ColorMode.BRIGHTNESS}
         if self._device.capabilities.get("supportRGB"):
             self._supported_color_modes.add(
                 ColorMode.HS
@@ -148,19 +150,14 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         """Return the color mode of the light."""
         # Determine the current color mode based on the light's state
         if self._device.effect != 0:
-            # When an effect is active, the color mode should reflect what can be
-            # adjusted. If brightness can be adjusted during effect, return BRIGHTNESS,
-            # else ONOFF
-            if self._device.brightness != 0:
-                return ColorMode.BRIGHTNESS
-            return ColorMode.ONOFF
+            # When an effect is active, return BRIGHTNESS as the mode
+            return ColorMode.BRIGHTNESS
         if self._device.hue != 0 or self._device.saturation != 0:
             return ColorMode.HS
         if self._device.cct != 0:
             return ColorMode.COLOR_TEMP
-        if self._device.brightness != 0:
-            return ColorMode.BRIGHTNESS
-        return ColorMode.ONOFF
+        # Default to brightness mode
+        return ColorMode.BRIGHTNESS
 
     @property
     def hs_color(self) -> tuple[float, float] | None:
@@ -196,6 +193,13 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
     def effect(self) -> str | None:
         """Return the current effect."""
         return self._effect_map.get(self._device.effect)
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        # ActiveBluetoothDataUpdateCoordinator uses 'available' property
+        # instead of 'last_update_success'
+        return self.coordinator.available
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
@@ -256,7 +260,7 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         # Request an update to reflect the new state
         self.async_write_ha_state()
 
-    async def async_turn_off(self, **_kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:  # noqa: ARG002
         """Turn the light off."""
         _LOGGER.debug("Turning off light %s", self.entity_id)
         await self._device.set_power(on=False)

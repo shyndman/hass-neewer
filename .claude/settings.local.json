@@ -6,7 +6,10 @@
       "Bash(uv run tool pyright:*)",
       "Bash(uv tool run:*)",
       "Bash(pyright:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "WebFetch(domain:developers.home-assistant.io)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

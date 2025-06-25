@@ -68,7 +68,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
     def _needs_poll(
         self,
         service_info: bluetooth.BluetoothServiceInfoBleak,
-        _seconds_since_last_poll: float | None,
+        seconds_since_last_poll: float | None,  # noqa: ARG002
     ) -> bool:
         """Determine if a poll is needed."""
         # Only poll if HA is running, device not connected, and connectable
@@ -141,7 +141,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
     def _async_handle_bluetooth_event(
         self,
         service_info: bluetooth.BluetoothServiceInfoBleak,
-        change: bluetooth.BluetoothChange,
+        change: bluetooth.BluetoothChange,  # noqa: ARG002
     ) -> None:
         """Handle a Bluetooth event."""
         # Update the device's BLE device reference if it changed
