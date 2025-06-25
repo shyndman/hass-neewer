@@ -9,7 +9,8 @@
       "Bash(sed:*)",
       "WebFetch(domain:developers.home-assistant.io)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

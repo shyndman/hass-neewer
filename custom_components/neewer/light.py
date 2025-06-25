@@ -105,13 +105,20 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         )
 
         # Set supported color modes based on capabilities
-        self._supported_color_modes: set[ColorMode] = {ColorMode.BRIGHTNESS}
-        if self._device.capabilities.get("supportRGB"):
-            self._supported_color_modes.add(
-                ColorMode.HS
-            )  # Neewer uses HSI, HS is closest HA mode
+        # Don't include BRIGHTNESS explicitly - it's implied by other modes
+        self._supported_color_modes: set[ColorMode] = set()
+
+        # Add color temperature if supported (for white light with adjustable temp)
         if self._device.capabilities.get("cctRange"):
             self._supported_color_modes.add(ColorMode.COLOR_TEMP)
+
+        # Add RGB/HS color if supported (for colored lighting)
+        if self._device.capabilities.get("supportRGB"):
+            self._supported_color_modes.add(ColorMode.HS)
+
+        # If no color modes are supported, default to brightness only
+        if not self._supported_color_modes:
+            self._supported_color_modes.add(ColorMode.BRIGHTNESS)
 
         self._attr_supported_color_modes = self._supported_color_modes
 

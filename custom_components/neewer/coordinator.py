@@ -141,9 +141,12 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
     def _async_handle_bluetooth_event(
         self,
         service_info: bluetooth.BluetoothServiceInfoBleak,
-        change: bluetooth.BluetoothChange,  # noqa: ARG002
+        change: bluetooth.BluetoothChange,
     ) -> None:
         """Handle a Bluetooth event."""
+        # Call parent to handle polling logic
+        super()._async_handle_bluetooth_event(service_info, change)
+        
         # Update the device's BLE device reference if it changed
         if service_info.address == self.device.address:
             if self.device.ble_device != service_info.device:
