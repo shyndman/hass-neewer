@@ -209,7 +209,7 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
 
         # Turn on the light if it's not already on
         if not self.is_on:
-            await self._device.set_power(True)
+            await self._device.set_power(on=True)
 
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         hs_color = kwargs.get(ATTR_HS_COLOR)
@@ -242,13 +242,13 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
             await self._device.set_brightness(neewer_brightness)
 
         # Request an update to reflect the new state
-        await self.coordinator.async_refresh()
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **_kwargs: Any) -> None:
         """Turn the light off."""
         _LOGGER.debug("Turning off light %s", self.entity_id)
-        await self._device.set_power(False)
-        await self.coordinator.async_refresh()
+        await self._device.set_power(on=False)
+        self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:

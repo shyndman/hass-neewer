@@ -4,7 +4,9 @@
       "Bash(ruff check:*)",
       "Bash(grep:*)",
       "Bash(uv run tool pyright:*)",
-      "Bash(uv tool run:*)"
+      "Bash(uv tool run:*)",
+      "Bash(pyright:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import platform
 import subprocess
@@ -130,8 +131,6 @@ async def _discover_mac_macos(device_name: str) -> str | None:
         stdout, stderr = await proc.communicate()
 
         if proc.returncode == 0:
-            import json
-
             data = json.loads(stdout.decode())
 
             # Parse Bluetooth device data
@@ -141,7 +140,7 @@ async def _discover_mac_macos(device_name: str) -> str | None:
                     if device.get("device_name", "").lower() == device_name.lower():
                         return device.get("device_address")
 
-    except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as err:
+    except (OSError, subprocess.SubprocessError, ValueError) as err:
         _LOGGER.debug("macOS MAC discovery failed: %s", err)
 
     return None

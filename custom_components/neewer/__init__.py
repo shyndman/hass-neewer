@@ -106,7 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     # Start the coordinator to connect and poll
-    await coordinator.async_start()
+    entry.async_on_unload(coordinator.async_start())
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

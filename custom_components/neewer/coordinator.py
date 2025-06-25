@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth.active_update_coordinator import (
@@ -12,6 +12,9 @@ from homeassistant.components.bluetooth.active_update_coordinator import (
 from homeassistant.core import CoreState, HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import UpdateFailed
+
+if TYPE_CHECKING:
+    from bleak.backends.device import BLEDevice
 
 from .const import DOMAIN
 from .neewer_device import NeewerConnectionError, NeewerDevice
@@ -26,7 +29,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
         self,
         hass: HomeAssistant,
         logger: logging.Logger,
-        ble_device: bluetooth.BLEDevice,
+        ble_device: BLEDevice,
         address: str,
         capabilities: dict[str, Any],
     ) -> None:
@@ -128,7 +131,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
         self.async_update_listeners()
 
     @callback
-    def _on_device_disconnect(self, ble_device: bluetooth.BLEDevice) -> None:
+    def _on_device_disconnect(self, ble_device: BLEDevice) -> None:
         """Handle device disconnect."""
         _LOGGER.warning("Device %s disconnected", ble_device.name or ble_device.address)
         # Trigger a refresh to attempt reconnection
@@ -138,7 +141,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
     def _async_handle_bluetooth_event(
         self,
         service_info: bluetooth.BluetoothServiceInfoBleak,
-        _change: bluetooth.BluetoothChange,
+        change: bluetooth.BluetoothChange,
     ) -> None:
         """Handle a Bluetooth event."""
         # Update the device's BLE device reference if it changed

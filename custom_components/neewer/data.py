@@ -46,7 +46,7 @@ class NeewerLightData:
             instance._init_date_code_map()
             cls._instance = instance
             # Don't load synchronously in __new__, will be loaded async
-        return cls._instance
+        return cls._instance  # type: ignore[return-value]
 
     def _init_date_code_map(self) -> None:
         """Initialize the date code to project name mapping."""
