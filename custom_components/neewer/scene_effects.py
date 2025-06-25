@@ -14,7 +14,7 @@ ADVANCED_SCENE_PARAMS = {
         "defaults": {"brightness": 100, "cct": 50, "gm": 50, "speed": 5},
     },
     0x02: {  # Paparazzi
-        "name": "Paparazzi", 
+        "name": "Paparazzi",
         "params": ["brightness", "cct", "gm", "speed"],
         "defaults": {"brightness": 100, "cct": 50, "gm": 50, "speed": 5},
     },
@@ -113,20 +113,21 @@ def build_advanced_scene_command(
         
     Returns:
         Command bytes list
+
     """
     if effect_id not in ADVANCED_SCENE_PARAMS:
         raise ValueError(f"Unknown advanced scene effect ID: {effect_id}")
-        
+
     scene_info = ADVANCED_SCENE_PARAMS[effect_id]
     defaults = scene_info["defaults"].copy()
-    
+
     # Override defaults with provided parameters
     defaults.update(params)
     defaults["brightness"] = brightness
-    
+
     # Build command based on effect type
     command_data = [0x91]  # Advanced scene command tag
-    
+
     if effect_id in [0x01, 0x02, 0x03, 0x06, 0x08, 0x0F]:  # CCT-based effects
         # [0x91, 0x0E, MAC[6], 0x8B, EFFECT_ID, BRR, CCT, GM, SPEED, 0x00]
         command_data.extend([
@@ -140,7 +141,7 @@ def build_advanced_scene_command(
             defaults["speed"],
             0x00
         ])
-        
+
     elif effect_id in [0x07, 0x09]:  # HUE-based effects
         # [0x91, 0x0F, MAC[6], 0x8B, EFFECT_ID, BRR, HUE_LOW, HUE_HIGH, SAT, SPEED, 0x00]
         hue = defaults["hue"]
@@ -158,7 +159,7 @@ def build_advanced_scene_command(
             defaults["speed"],
             0x00
         ])
-        
+
     elif effect_id == 0x04:  # Explosion
         # [0x91, 0x0F, MAC[6], 0x8B, EFFECT_ID, BRR, CCT, GM, SPEED, SPARKS, 0x00]
         command_data.extend([
@@ -173,7 +174,7 @@ def build_advanced_scene_command(
             defaults["sparks"],
             0x00
         ])
-        
+
     elif effect_id in [0x05, 0x0B]:  # Welding, Candlelight (dual brightness)
         if effect_id == 0x05:  # Welding
             # [0x91, 0x0F, MAC[6], 0x8B, EFFECT_ID, BRR_LOW, BRR_HIGH, CCT, GM, SPEED, 0x00]
@@ -204,7 +205,7 @@ def build_advanced_scene_command(
                 defaults["sparks"],
                 0x00
             ])
-        
+
     elif effect_id in [0x0A, 0x11]:  # Cop Car, Party (color mode)
         # [0x91, 0x0E, MAC[6], 0x8B, EFFECT_ID, BRR, COLOR_MODE, SPEED, 0x00, 0x00]
         command_data.extend([
@@ -218,7 +219,7 @@ def build_advanced_scene_command(
             0x00,
             0x00
         ])
-        
+
     elif effect_id == 0x0C:  # HUE Loop
         # [0x91, 0x11, MAC[6], 0x8B, EFFECT_ID, BRR, HUE_LOW[2], HUE_HIGH[2], SPEED, 0x00]
         hue_low = defaults["hue_low"]
@@ -236,7 +237,7 @@ def build_advanced_scene_command(
             defaults["speed"],
             0x00
         ])
-        
+
     elif effect_id == 0x0D:  # CCT Loop
         # [0x91, 0x0E, MAC[6], 0x8B, EFFECT_ID, BRR, CCT_LOW, CCT_HIGH, SPEED, 0x00]
         command_data.extend([
@@ -250,7 +251,7 @@ def build_advanced_scene_command(
             defaults["speed"],
             0x00
         ])
-        
+
     elif effect_id == 0x0E:  # INT Loop
         # [0x91, 0x0F, MAC[6], 0x8B, EFFECT_ID, BRR_LOW, BRR_HIGH, HUE[2], SPEED, 0x00]
         hue = defaults["hue"]
@@ -268,7 +269,7 @@ def build_advanced_scene_command(
             defaults["speed"],
             0x00
         ])
-        
+
     elif effect_id == 0x10:  # Firework
         # [0x91, 0x0F, MAC[6], 0x8B, EFFECT_ID, BRR, COLOR_MODE, SPEED, SPARKS, 0x00, 0x00]
         command_data.extend([
@@ -283,7 +284,7 @@ def build_advanced_scene_command(
             0x00,
             0x00
         ])
-    
+
     return command_data
 
 
@@ -296,14 +297,14 @@ def validate_scene_parameters(effect_id: int, **params: Any) -> dict[str, Any]:
     """Validate and normalize scene parameters."""
     if effect_id not in ADVANCED_SCENE_PARAMS:
         return {}
-        
+
     scene_info = ADVANCED_SCENE_PARAMS[effect_id]
     validated = {}
-    
+
     for param_name in scene_info["params"]:
         if param_name in params:
             value = params[param_name]
-            
+
             # Validate ranges
             if param_name in ["brightness", "brightness_low", "brightness_high"]:
                 validated[param_name] = max(0, min(100, int(value)))
@@ -321,5 +322,6 @@ def validate_scene_parameters(effect_id: int, **params: Any) -> dict[str, Any]:
                 validated[param_name] = max(0, min(4, int(value)))
             else:
                 validated[param_name] = value
-                
+
     return validated
+

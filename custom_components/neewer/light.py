@@ -33,7 +33,7 @@ _LOGGER = logging.getLogger(__name__)
 # Mapping of Neewer effect IDs to Home Assistant effect names
 NEEWER_BASIC_EFFECTS = {
     0x01: "Squad Car",
-    0x02: "Ambulance", 
+    0x02: "Ambulance",
     0x03: "Fire Engine",
     0x04: "Fireworks",
     0x05: "Party",
@@ -47,7 +47,7 @@ NEEWER_ADVANCED_EFFECTS = {
     0x01: "Lightning",
     0x02: "Paparazzi",
     0x03: "Defective Bulb",
-    0x04: "Explosion", 
+    0x04: "Explosion",
     0x05: "Welding",
     0x06: "CCT Flash",
     0x07: "HUE Flash",
@@ -103,7 +103,7 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
 
         # Set supported features (effects)
         supported_features = LightEntityFeature(0)
-        
+
         # Determine which effects to support based on device capabilities
         self._effect_map = {}
         if self._device.capabilities.get("support17FX"):
@@ -112,7 +112,7 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         elif self._device.capabilities.get("support9FX"):
             self._effect_map = NEEWER_BASIC_EFFECTS
             supported_features |= LightEntityFeature.EFFECT
-            
+
         if self._effect_map:
             self._attr_effect_list = list(self._effect_map.values())
 
@@ -188,16 +188,16 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return extra state attributes."""
         attrs = {}
-        
+
         # Add GM (Green/Magenta) attribute if device supports it
         if self._device.capabilities.get("supportCCTGM"):
             attrs[ATTR_GM] = self._device.gm
-            
+
         # Add MAC discovery info for diagnostic purposes
         attrs["mac_address"] = self._device.capabilities.get("mac_address")
         attrs["mac_discovery_successful"] = self._device.capabilities.get("mac_discovery_successful", False)
         attrs["mac_source"] = self._device.capabilities.get("mac_source", "unknown")
-        
+
         return attrs if attrs else None
 
     async def async_turn_on(self, **kwargs: Any) -> None:

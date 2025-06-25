@@ -5,18 +5,18 @@
   "config_flow": true,
   "dependencies": ["bluetooth"],
   "documentation": "https://github.com/shyndman/hass-neewer",
+  "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/shyndman/hass-neewer/issues",
   "requirements": ["bleak-retry-connector==1.2.0"],
-  "version": "0.0.1",
+  "version": "0.1.0",
   "bluetooth": [
     {
-      "service_uuid": "69400001-B5A3-F393-E0A9-E50E24DCCA99"
+      "service_uuid": "69400001-b5a3-f393-e0a9-e50e24dcca99"
     },
     {
       "manufacturer_id": 89,
       "service_data_uuid": "00006940-0000-1000-8000-00805f9b34fb"
     }
-  ],
-  "platforms": ["light"]
+  ]
 }

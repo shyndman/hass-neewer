@@ -64,7 +64,7 @@ class NeewerDevice:
         self._saturation: int = 0
         self._effect: int = 0
         self._gm: int = 0  # Green/Magenta adjustment
-        
+
         # MAC address for advanced commands
         self._mac_address = capabilities.get("mac_address")
 
@@ -254,7 +254,7 @@ class NeewerDevice:
         """Get MAC address bytes if available."""
         # First try the discovered MAC address
         mac_address = self._mac_address or self._ble_device.address
-        
+
         try:
             if mac_address and ":" in mac_address:
                 mac_bytes = bytes.fromhex(mac_address.replace(":", ""))
@@ -266,7 +266,7 @@ class NeewerDevice:
     async def set_power(self, on: bool) -> None:
         """Turn the light on or off."""
         mac_bytes = self._get_mac_bytes()
-        
+
         # Try new format first if device supports it and we have MAC
         if self._capabilities.get("newPowerLightCommand") and mac_bytes:
             try:
@@ -276,7 +276,7 @@ class NeewerDevice:
                 return
             except NeewerCommandError as err:
                 _LOGGER.warning("New power command failed, falling back to old format: %s", err)
-        
+
         # Fallback to old format
         try:
             command = [0x81, 0x01, 0x01 if on else 0x02]
