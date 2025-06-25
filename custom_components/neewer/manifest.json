@@ -1,15 +1,6 @@
 {
   "domain": "neewer",
   "name": "Neewer Light",
-  "codeowners": ["@shyndman"],
-  "config_flow": true,
-  "dependencies": ["bluetooth"],
-  "documentation": "https://github.com/shyndman/hass-neewer",
-  "integration_type": "device",
-  "iot_class": "local_push",
-  "issue_tracker": "https://github.com/shyndman/hass-neewer/issues",
-  "requirements": ["bleak-retry-connector==1.2.0"],
-  "version": "0.1.0",
   "bluetooth": [
     {
       "service_uuid": "69400001-b5a3-f393-e0a9-e50e24dcca99"
@@ -18,5 +9,21 @@
       "manufacturer_id": 89,
       "service_data_uuid": "00006940-0000-1000-8000-00805f9b34fb"
     }
-  ]
+  ],
+  "codeowners": [
+    "@shyndman"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "bluetooth"
+  ],
+  "documentation": "https://github.com/shyndman/hass-neewer",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/shyndman/hass-neewer/issues",
+  "requirements": [
+    "bleak-retry-connector==1.2.0"
+  ],
+  "version": "0.1.0"
+
 }
