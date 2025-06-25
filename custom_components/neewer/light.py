@@ -156,15 +156,11 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
     def color_mode(self) -> ColorMode | None:
         """Return the color mode of the light."""
         # Determine the current color mode based on the light's state
-        if self._device.effect != 0:
-            # When an effect is active, return BRIGHTNESS as the mode
-            return ColorMode.BRIGHTNESS
+        # Must return one of our supported modes: {COLOR_TEMP, HS}
         if self._device.hue != 0 or self._device.saturation != 0:
             return ColorMode.HS
-        if self._device.cct != 0:
-            return ColorMode.COLOR_TEMP
-        # Default to brightness mode
-        return ColorMode.BRIGHTNESS
+        # Default to color temperature mode (includes brightness control)
+        return ColorMode.COLOR_TEMP
 
     @property
     def hs_color(self) -> tuple[float, float] | None:

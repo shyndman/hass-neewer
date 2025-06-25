@@ -160,12 +160,38 @@ class NeewerDevice:
             _LOGGER.debug("Connected to %s", self.name)
 
             # Enable notifications
-            await self._client.start_notify(
-                NOTIFY_CHARACTERISTIC_UUID, self._notification_handler
+            _LOGGER.debug(
+                "Enabling notifications on characteristic %s",
+                NOTIFY_CHARACTERISTIC_UUID,
             )
+            try:
+                await self._client.start_notify(
+                    NOTIFY_CHARACTERISTIC_UUID, self._notification_handler
+                )
+                _LOGGER.debug("Notifications enabled successfully")
+            except Exception as e:
+                _LOGGER.error("Failed to enable notifications: %s", e)
+                # List available characteristics for debugging
+                services = self._client.services
+                for service in services:
+                    _LOGGER.debug("Service: %s", service.uuid)
+                    for char in service.characteristics:
+                        _LOGGER.debug(
+                            "  Characteristic: %s, properties: %s",
+                            char.uuid,
+                            char.properties,
+                        )
+
+            # Wait a bit for the device to be ready
+            await asyncio.sleep(0.1)
 
             # Send initial read request
+            _LOGGER.debug("Sending initial status query")
             await self._send_command([0x84, 0x00])
+
+            # Wait for response
+            await asyncio.sleep(0.5)
+            _LOGGER.debug("Initial connection sequence completed")
 
         except BleakError as err:
             msg = f"Failed to connect to {self.name}: {err}"
@@ -194,7 +220,9 @@ class NeewerDevice:
         self, _characteristic: BleakGATTCharacteristic, data: bytearray
     ) -> None:
         """Handle incoming notifications."""
-        _LOGGER.debug("Notification from %s: %s", self.name, data.hex())
+        _LOGGER.debug(
+            "Notification from %s: %s (len=%d)", self.name, data.hex(), len(data)
+        )
 
         # Validate checksum
         if len(data) >= MIN_NOTIFICATION_LENGTH and data[0] == PREFIX:
@@ -207,16 +235,31 @@ class NeewerDevice:
                     data[-1],
                 )
                 return
+        else:
+            _LOGGER.debug(
+                "Notification doesn't match expected format (prefix=%s, len=%d)",
+                data[0] if data else "none",
+                len(data),
+            )
 
-        # Parse notifications
-        if (
-            len(data) >= MIN_NOTIFICATION_LENGTH
-            and data[0] == PREFIX
-            and data[1] == NOTIFICATION_CHANNEL_TAG
-        ):
-            # Channel update notification: [0x78, 0x01, 0x01, CHANNEL, CHECKSUM]
-            self._effect = data[3]
-            _LOGGER.debug("Effect updated to: %s", self._effect)
+        # Parse different notification types
+        if len(data) >= MIN_NOTIFICATION_LENGTH and data[0] == PREFIX:
+            notification_type = data[1] if len(data) > 1 else 0
+            _LOGGER.debug("Processing notification type: 0x%02x", notification_type)
+
+            if data[1] == NOTIFICATION_CHANNEL_TAG:
+                # Channel update notification: [0x78, 0x01, 0x01, CHANNEL, CHECKSUM]
+                if len(data) >= 5:
+                    self._effect = data[3]
+                    _LOGGER.debug("Effect updated to: %s", self._effect)
+            elif data[1] == 0x84:
+                # Status response notification - parse device state
+                _LOGGER.debug("Received status response, parsing device state")
+                self._parse_status_response(data)
+            else:
+                _LOGGER.debug(
+                    "Unknown notification type: 0x%02x, data: %s", data[1], data.hex()
+                )
 
         # Notify callbacks
         for callback in self._notification_callbacks:
@@ -224,6 +267,16 @@ class NeewerDevice:
                 callback(bytes(data))
             except Exception:
                 _LOGGER.exception("Error in notification callback")
+
+    def _parse_status_response(self, data: bytearray) -> None:
+        """Parse status response from device."""
+        _LOGGER.debug("Parsing status response: %s", data.hex())
+        # TODO: Implement proper status parsing based on Neewer protocol
+        # For now, just log the raw data to understand the format
+        if len(data) >= 8:
+            _LOGGER.debug(
+                "Status data - bytes 2-7: %s", " ".join(f"0x{b:02x}" for b in data[2:8])
+            )
 
     async def _send_command(self, data: list[int]) -> None:
         """Send a command to the device."""
@@ -246,9 +299,11 @@ class NeewerDevice:
 
         try:
             assert self._client is not None, "Client is not initialized"
+            _LOGGER.debug("Writing to characteristic %s", CONTROL_CHARACTERISTIC_UUID)
             await self._client.write_gatt_char(
                 CONTROL_CHARACTERISTIC_UUID, bytes(full_command), response=True
             )
+            _LOGGER.debug("Command written successfully")
             self._last_command_time = asyncio.get_event_loop().time()
         except BleakError as err:
             msg = f"Failed to send command to {self.name}: {err}"

@@ -91,13 +91,16 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
         # Get connectable device for active connection
         if service_info.connectable:
             connectable_device = service_info.device
+            _LOGGER.debug("Using connectable device from service_info")
         elif device := bluetooth.async_ble_device_from_address(
             self.hass, service_info.device.address, connectable=True
         ):
             connectable_device = device
+            _LOGGER.debug("Found connectable device via address lookup")
         else:
             address = service_info.device.address
             msg = f"No connectable device found for {address}"
+            _LOGGER.error(msg)
             raise UpdateFailed(msg)
 
         # Update device's BLE device reference
@@ -106,14 +109,18 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
         # Connect if not connected
         if not self.device.is_connected:
             try:
+                _LOGGER.debug("Device not connected, attempting connection")
                 await self.device.connect()
+                _LOGGER.debug("Successfully connected to device")
             except NeewerConnectionError as err:
                 msg = f"Failed to connect: {err}"
                 _LOGGER.warning(msg)
                 raise UpdateFailed(msg) from err
+        else:
+            _LOGGER.debug("Device already connected")
 
-        # Return current device state
-        return {
+        # Get current device state
+        current_state = {
             "is_on": self.device.is_on,
             "brightness": self.device.brightness,
             "cct": self.device.cct,
@@ -122,6 +129,9 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
             "effect": self.device.effect,
             "gm": self.device.gm,
         }
+        _LOGGER.debug("Current device state: %s", current_state)
+
+        return current_state
 
     @callback
     def _on_notification(self, data: bytes) -> None:
@@ -146,7 +156,7 @@ class NeewerDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[dict[str,
         """Handle a Bluetooth event."""
         # Call parent to handle polling logic
         super()._async_handle_bluetooth_event(service_info, change)
-        
+
         # Update the device's BLE device reference if it changed
         if service_info.address == self.device.address:
             if self.device.ble_device != service_info.device:
