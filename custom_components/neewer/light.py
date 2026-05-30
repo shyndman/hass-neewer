@@ -220,7 +220,7 @@ class NeewerLightEntity(CoordinatorEntity[NeewerDataUpdateCoordinator], LightEnt
         )
         attrs["mac_source"] = self._device.capabilities.get("mac_source", "unknown")
 
-        return attrs if attrs else None
+        return attrs or None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""

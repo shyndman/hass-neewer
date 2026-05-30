@@ -128,7 +128,7 @@ async def _discover_mac_macos(device_name: str) -> str | None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        stdout, _stderr = await proc.communicate()
 
         if proc.returncode == 0:
             data = json.loads(stdout.decode())
@@ -179,7 +179,7 @@ async def _discover_mac_linux(device_name: str) -> str | None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        stdout, _stderr = await proc.communicate()
 
         if proc.returncode == 0:
             lines = stdout.decode().split("\n")
@@ -214,7 +214,7 @@ async def _discover_mac_windows(device_name: str) -> str | None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        stdout, _stderr = await proc.communicate()
 
         if proc.returncode == 0:
             output = stdout.decode().strip()
