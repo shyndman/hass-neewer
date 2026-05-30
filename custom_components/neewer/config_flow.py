@@ -31,13 +31,15 @@ class NeewerLightConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle the bluetooth discovery step."""
         _LOGGER.debug(
-            "[BLUETOOTH DISCOVERY] Device found - Name: %s, Address: %s, Connectable: %s",
+            "[BLUETOOTH DISCOVERY] Device found - Name: %s, "
+            "Address: %s, Connectable: %s",
             discovery_info.name,
             discovery_info.address,
             discovery_info.connectable,
         )
         _LOGGER.debug(
-            "[BLUETOOTH DISCOVERY] Device details - RSSI: %s, Service UUIDs: %s, Manufacturer data: %s",
+            "[BLUETOOTH DISCOVERY] Device details - RSSI: %s, "
+            "Service UUIDs: %s, Manufacturer data: %s",
             discovery_info.rssi,
             discovery_info.service_uuids,
             discovery_info.manufacturer_data,
@@ -49,7 +51,8 @@ class NeewerLightConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         self._abort_if_unique_id_configured()
         _LOGGER.debug(
-            "[BLUETOOTH DISCOVERY] Unique ID check passed, device not already configured"
+            "[BLUETOOTH DISCOVERY] Unique ID check passed, "
+            "device not already configured"
         )
 
         # Check if the device is a Neewer light based on its name
@@ -61,7 +64,8 @@ class NeewerLightConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         if not is_neewer:
             _LOGGER.debug(
-                "[BLUETOOTH DISCOVERY] Aborting - device name doesn't match Neewer patterns"
+                "[BLUETOOTH DISCOVERY] Aborting - device name doesn't match "
+                "Neewer patterns"
             )
             return self.async_abort(reason="not_neewer_light")
 
@@ -142,7 +146,8 @@ class NeewerLightConfigFlow(ConfigFlow, domain=DOMAIN):
 
         for discovery_info in discovered_devices:
             _LOGGER.debug(
-                "[USER DISCOVERY] Checking device - Name: '%s', Address: %s, Already configured: %s",
+                "[USER DISCOVERY] Checking device - Name: '%s', "
+                "Address: %s, Already configured: %s",
                 discovery_info.name,
                 discovery_info.address,
                 discovery_info.address in current_addresses,
@@ -158,7 +163,8 @@ class NeewerLightConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 if is_neewer:
                     _LOGGER.debug(
-                        "[USER DISCOVERY] Found suitable Neewer device, setting up config"
+                        "[USER DISCOVERY] Found suitable Neewer device, "
+                        "setting up config"
                     )
                     await self.async_set_unique_id(discovery_info.address)
                     _LOGGER.debug(

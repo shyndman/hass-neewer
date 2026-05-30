@@ -29,6 +29,13 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+NOTIFICATION_CHANNEL_PACKET_LENGTH = 5
+MIN_POWER_STATUS_LENGTH = 4
+POWER_STATUS_PACKET_LENGTH = 5
+POWER_STATUS_RESPONSE_TAG = 0x85
+POWER_STATE_ON = 1
+POWER_STATE_STANDBY = 2
+
 
 class NeewerDeviceError(Exception):
     """Base exception for Neewer device communication."""
@@ -185,8 +192,8 @@ class NeewerDevice:
                         "Failed to read initial device status - device may not respond"
                     )
 
-            except Exception as e:
-                _LOGGER.error("Failed to enable notifications: %s", e)
+            except Exception:
+                _LOGGER.exception("Failed to enable notifications")
                 # List available characteristics for debugging
                 services = self._client.services
                 for service in services:
@@ -256,7 +263,10 @@ class NeewerDevice:
             notification_type = data[1] if len(data) > 1 else 0
             _LOGGER.debug("Processing notification type: 0x%02x", notification_type)
 
-            if data[1] == NOTIFICATION_CHANNEL_TAG and len(data) == 5:
+            if (
+                data[1] == NOTIFICATION_CHANNEL_TAG
+                and len(data) == NOTIFICATION_CHANNEL_PACKET_LENGTH
+            ):
                 # Channel update notification: [0x78, 0x01, 0x01, CHANNEL, CHECKSUM]
                 channel = data[3] + 1  # Convert 0-based to 1-based
                 # Clamp channel to valid range (1 to 17 for effects)
@@ -276,7 +286,11 @@ class NeewerDevice:
                 _LOGGER.exception("Error in notification callback")
 
     async def _query_device_status(self) -> bool:
-        """Query device status and wait for response using polling pattern (like Python implementation)."""
+        """
+        Query device status and wait for response.
+
+        Uses the polling pattern from the Python implementation.
+        """
         if not self.is_connected:
             return False
 
@@ -303,15 +317,19 @@ class NeewerDevice:
         """Parse status response from device (based on Python implementation)."""
         _LOGGER.debug("Parsing status response: %s", data.hex())
 
-        if len(data) >= 4:
+        if len(data) >= MIN_POWER_STATUS_LENGTH:
             # Power status response format: [0x78, 0x85, ?, POWER, checksum]
             # POWER: 1 = ON, 2 = STANDBY/OFF (from Python implementation)
-            if len(data) >= 5 and data[0] == PREFIX and data[1] == 0x85:
+            if (
+                len(data) >= POWER_STATUS_PACKET_LENGTH
+                and data[0] == PREFIX
+                and data[1] == POWER_STATUS_RESPONSE_TAG
+            ):
                 power_state = data[3]
-                if power_state == 1:
+                if power_state == POWER_STATE_ON:
                     self._is_on = True
                     _LOGGER.debug("Device power state: ON")
-                elif power_state == 2:
+                elif power_state == POWER_STATE_STANDBY:
                     self._is_on = False
                     _LOGGER.debug("Device power state: STANDBY/OFF")
                 else:
@@ -398,7 +416,11 @@ class NeewerDevice:
             raise
 
     async def set_brightness(self, brightness: int) -> None:
-        """Set brightness (0-100) using mode-aware commands (like Swift implementation)."""
+        """
+        Set brightness (0-100) using mode-aware commands.
+
+        Mirrors the Swift implementation.
+        """
         brightness = max(0, min(100, brightness))
 
         # For CCT-only lights, use dedicated brightness command
@@ -408,7 +430,7 @@ class NeewerDevice:
             self._brightness = brightness
             return
 
-        # For RGB-capable lights, brightness command depends on current mode (like Swift)
+        # For RGB-capable lights, brightness command depends on current mode.
         if self._current_mode == "CCT":
             # Use current CCT values with new brightness
             cct_kelvin = 2700 + (self._cct - 32) * (6500 - 2700) / (56 - 32)
