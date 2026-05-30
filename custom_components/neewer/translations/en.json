@@ -2,20 +2,17 @@
     "config": {
         "step": {
             "user": {
-                "description": "If you need help with the configuration have a look here: https://github.com/shyndman/hass-neewer",
-                "data": {
-                    "username": "Username",
-                    "password": "Password"
-                }
+                "title": "Discover Neewer light",
+                "description": "{message}"
+            },
+            "bluetooth_confirm": {
+                "title": "Confirm Bluetooth device",
+                "description": "Set up {name} ({address})?"
             }
         },
-        "error": {
-            "auth": "Username/Password is wrong.",
-            "connection": "Unable to connect to the server.",
-            "unknown": "Unknown error occurred."
-        },
         "abort": {
-            "already_configured": "This entry is already configured."
+            "already_configured": "This entry is already configured.",
+            "not_neewer_light": "The discovered Bluetooth device is not a Neewer light."
         }
     }
 }
