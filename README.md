@@ -14,7 +14,7 @@ This repository contains a custom component for Home Assistant that provides con
 
 1.  Open HACS in your Home Assistant instance.
 2.  Go to "Integrations" and click the three dots in the top right corner, then select "Custom repositories".
-3.  Add this repository's URL (`https://github.com/your-github-username/hass-neewer`) as a "Integration" type.
+3.  Add this repository's URL (`https://github.com/shyndman/hass-neewer`) as an "Integration" type.
 4.  Search for "Neewer Light" in HACS and install it.
 5.  Restart Home Assistant.
 
@@ -64,7 +64,5 @@ Contributions are welcome! Please see `CONTRIBUTING.md` for guidelines.
 *   Add more comprehensive tests for various light models and command types.
 *   Improve MAC address discovery reliability across different platforms.
 *   Enhance scene control and parameter handling for advanced effects.
-*   Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-*   Create your first release.
 *   Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
 *   Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).

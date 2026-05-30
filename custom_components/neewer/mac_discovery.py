@@ -6,8 +6,11 @@ import asyncio
 import json
 import logging
 import platform
+import re
 import subprocess
 from typing import TYPE_CHECKING, Any
+
+from homeassistant.components import bluetooth
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -99,8 +102,6 @@ async def async_discover_mac_address(
 async def _validate_address(hass: HomeAssistant, address: str) -> bool:
     """Validate that an address is reachable via Home Assistant's Bluetooth."""
     try:
-        from homeassistant.components import bluetooth
-
         # Check if HA's Bluetooth can see this address
         service_info = bluetooth.async_last_service_info(
             hass, address, connectable=True
@@ -156,7 +157,7 @@ async def _discover_mac_linux(device_name: str) -> str | None:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
+        stdout, _stderr = await proc.communicate()
 
         if proc.returncode == 0:
             lines = stdout.decode().split("\n")
@@ -220,8 +221,6 @@ async def _discover_mac_windows(device_name: str) -> str | None:
             output = stdout.decode().strip()
             # Extract MAC from instance ID (format varies)
             # Usually contains the MAC address in some form
-            import re
-
             mac_pattern = r"([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})"
             match = re.search(mac_pattern, output)
             if match:
@@ -251,8 +250,6 @@ def get_mac_from_address(address: str) -> str | None:
     address = address.replace("bluetooth://", "").replace("ble://", "")
 
     # Check if it's already a valid MAC address
-    import re
-
     mac_pattern = r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
     if re.match(mac_pattern, address):
         return address.replace("-", ":").upper()

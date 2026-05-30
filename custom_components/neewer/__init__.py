@@ -13,6 +13,7 @@ from homeassistant.helpers import config_validation as cv
 from .const import DOMAIN
 from .coordinator import NeewerDataUpdateCoordinator
 from .data import NeewerLightData
+from .light import NEEWER_ADVANCED_EFFECTS
 from .mac_discovery import async_get_enhanced_device_info
 
 if TYPE_CHECKING:
@@ -212,9 +213,6 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         params = {
             k: v for k, v in call.data.items() if k not in ["entity_id", "effect"]
         }
-
-        # Convert effect name to ID
-        from .light import NEEWER_ADVANCED_EFFECTS
 
         effect_id = next(
             (k for k, v in NEEWER_ADVANCED_EFFECTS.items() if v == effect_name),
